@@ -1,0 +1,54 @@
+version: '3'
+
+services:
+  db:
+    image: 'mysql/mysql-server:latest'
+    environment:
+      MYSQL_ROOT_PASSWORD: 'password!23'
+      MYSQL_ROOT_HOST: '%'
+      MYSQL_DATABASE: 'modelsDb'
+      MYSQL_USER: 'user'
+      MYSQL_PASSWORD: 'password'
+      MYSQL_ALLOW_EMPTY_PASSWORD: 1
+    volumes:
+      - './volumes/database:/var/lib/mysql'
+    ports:
+      - "3307:3306"
+    networks:
+      - forum
+
+  forum_public:
+    build: ./api/public
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    command: sh -c "npm install && npm run prod"
+    volumes:
+      - ./api/public:/usr/src/app
+    environment:
+      - NAME=frontend_public
+    networks:
+      - forum
+
+  nginx:
+    image: nginx:alpine
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    networks:
+      - forum
+    depends_on:
+      - db
+    ports:
+      - "80:80"
+
+  redis:
+    image: 'redis:alpine'
+    volumes:
+      - './volumes/db/redis/sockets:/data'
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    networks:
+      - forum
+
+networks:
+  forum:
+    driver: bridge
